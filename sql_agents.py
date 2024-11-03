@@ -1,5 +1,10 @@
+from dotenv import load_dotenv
 from swarm import Agent
 import sqlite3
+import os
+
+load_dotenv()
+model = os.getenv('LLM_MODEL', 'qwen2.5-coder:7b')
 
 conn = sqlite3.connect('rss-feed-database.db')
 cursor = conn.cursor()
@@ -62,22 +67,26 @@ def get_sql_agent_instructions():
 
 sql_router_agent = Agent(
     name="Router Agent",
-    instructions=get_sql_router_agent_instructions()
+    instructions=get_sql_router_agent_instructions(),
+    model="qwen2.5:3b"
 )
 rss_feed_agent = Agent(
     name="RSS Feed Agent",
     instructions=get_sql_agent_instructions() + "\n\nHelp the user with data related to RSS feeds. Be super enthusiastic about how many great RSS feeds there are in every one of your responses.",
-    functions=[run_sql_select_statement]
+    functions=[run_sql_select_statement],
+    model=model
 )
 user_agent = Agent(
     name="User Agent",
     instructions=get_sql_agent_instructions() + "\n\nHelp the user with data related to users.",
     functions=[run_sql_select_statement],
+    model=model
 )
 analytics_agent = Agent(
     name="Analytics Agent",
     instructions=get_sql_agent_instructions() + "\n\nHelp the user gain insights from the data with analytics. Be super accurate in reporting numbers and citing sources.",
     functions=[run_sql_select_statement],
+    model=model
 )
 
 
