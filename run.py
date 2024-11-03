@@ -3,7 +3,7 @@ from openai import OpenAI
 from swarm import Swarm
 import json
 
-from reasoning_agents import planner_agent
+from sql_agents import sql_router_agent
 
 ollama_client = OpenAI(
     base_url="http://localhost:11434/v1",        
@@ -115,4 +115,4 @@ def run(
         agent = response.agent
 
 if __name__ == "__main__":
-    run(planner_agent)
+    run(sql_router_agent)
