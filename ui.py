@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from openai import OpenAI
 from swarm import Swarm
-import json
+import json, os, requests, streamlit as st
 
 from reasoning_agents import planner_agent
 
@@ -66,25 +66,35 @@ def pretty_print_messages(messages) -> None:
             arg_str = json.dumps(json.loads(args)).replace(":", "=")
             print(f"\033[95m{name}\033[0m({arg_str[1:-1]})")
 
+        st.markdown(f"**{message['sender']}:** {message['content']}", unsafe_allow_html=True)
+
+
 def run(
     starting_agent, context_variables=None, stream=False, debug=False,
     temperature=temperature,
     max_tokens=max_tokens
 ) -> None:
     client = Swarm(client=ollama_client)
-    print("Starting Ollama Swarm CLI 🐝")
+    st.text("Starting Ollama Swarm CLI 🐝")
 
     messages = []
     agent = starting_agent
     auto_continue = False
+    input_counter = 0  # Counter for unique input keys
 
     while True:
         if auto_continue:
             user_input = "continue"
             auto_continue = False
         else:
-            user_input = input("\033[90mUser\033[0m: ")+"After your planning, pass to thinker agent. Thinker agent, after you presented all your reasoning steps, pass to rator agent."
-        messages.append({"role": "user", "content": user_input})
+            # Using a unique key for each text input
+            user_input = st.text_input(f"User Input {input_counter}", "") 
+            input_counter += 1  # Increment the counter for the next input
+            if st.button("Submit", key="submit_button{input_counter}"):
+                if user_input:  # Check if input is not empty
+                    messages.append({"role": "user", "content": user_input})
+                else:
+                    st.warning("Please enter a query.")
 
         response = client.run(
             agent=agent,
@@ -94,25 +104,41 @@ def run(
             debug=debug,
         )
 
-        if stream:
-            response = process_and_print_streaming_response(response)
-        else:
-            pretty_print_messages(response.messages)
-            
-            for message in response.messages:
-                if message["role"] == "assistant":
-                    try:
-                        # Try to parse the content as JSON
-                        content = json.loads(message["content"])
-                        if "next_action" in content and (content["next_action"] == "continue" or content["next_action"] =="final_answer" or content["next_action"] =="transfer_to_rater_agent"):
-                            auto_continue = True  
-                        elif "next_action" in content:
-                            print(f"Next action is {content['next_action']}.")
-                    except json.JSONDecodeError:
-                        pass
+        st.write("Response:", response)  # Debugging line
 
-        messages.extend(response.messages)
-        agent = response.agent
+        if stream:
+            process_and_print_streaming_response(response)
+        else:
+            try:
+                # Access the messages safely
+                messages_response = response.messages if hasattr(response, 'messages') else response.get_messages()
+                
+                pretty_print_messages(messages_response)
+
+                for message in messages_response:
+                    if message["role"] == "assistant":
+                        # Ensure content is present before parsing
+                        if message["content"]:
+                            content = json.loads(message["content"])  # Ensure content is JSON
+                            st.markdown(f"**{content['title']}**")
+                            st.markdown(content['content'])
+
+                            if "next_action" in content and content["next_action"] in ["continue", "final_answer", "transfer_to_rater_agent", "transfer_to_concluder_agent"]:
+                                auto_continue = True  
+                            elif "next_action" in content:
+                                st.markdown(f"Next action is {content['next_action']}.")
+                        else:
+                            st.error("Received an empty response from the assistant.")
+
+            except json.JSONDecodeError:
+                st.error("Failed to parse response: Invalid JSON format.")
+            except Exception as e:
+                st.error(f"Error processing response: {e}")
+
+        messages.extend(messages_response)  # Use the appropriate response messages structure
+        agent = response.agent  # Update to the new agent if available
+
 
 if __name__ == "__main__":
+    st.title("Multi-Agent Interaction")
     run(planner_agent)

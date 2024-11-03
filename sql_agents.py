@@ -5,6 +5,7 @@ import os
 
 load_dotenv()
 model = os.getenv('LLM_MODEL', 'qwen2.5-coder:7b')
+modelA = os.getenv('LLAMA_MODEL', 'llama3.2')
 
 conn = sqlite3.connect('rss-feed-database.db')
 cursor = conn.cursor()
@@ -108,86 +109,3 @@ sql_router_agent.functions = [transfer_to_rss_feeds_agent, transfer_to_user_agen
 rss_feed_agent.functions.append(transfer_back_to_router_agent)
 user_agent.functions.append(transfer_back_to_router_agent)
 analytics_agent.functions.append(transfer_back_to_router_agent)
-
-# New agent definitions
-def get_planner_agent_instructions():
-    return """You are the planner agent. Your task is to create a detailed plan for solving the user's query. Break down the problem into smaller, manageable steps and outline the approach to be taken by the thinker agent."""
-
-def get_thinker_agent_instructions():
-    return """You are the thinker agent. Your task is to follow the plan created by the planner agent and provide detailed, step-by-step explanations of your thought process. For each step:
-1. Provide a clear, concise title describing the current reasoning phase.
-2. Elaborate on your thought process in the content section.
-3. Decide whether to continue reasoning or provide a final answer.
-Response Format:
-Use JSON with keys: 'title', 'content', 'next_action' (values: 'continue' or 'final_answer')
-Key Instructions:
-- Employ at least 5 distinct reasoning steps.
-- Acknowledge your limitations as an AI and explicitly state what you can and cannot do.
-- Actively explore and evaluate alternative answers or approaches.
-- Critically assess your own reasoning; identify potential flaws or biases.
-- When re-examining, employ a fundamentally different approach or perspective.
-- Utilize at least 3 diverse methods to derive or verify your answer.
-- Incorporate relevant domain knowledge and best practices in your reasoning.
-- Quantify certainty levels for each step and the final conclusion when applicable.
-- Consider potential edge cases or exceptions to your reasoning.
-- Provide clear justifications for eliminating alternative hypotheses."""
-
-def get_rater_agent_instructions():
-    return """You are the rater agent. Your task is to evaluate the response provided by the thinker agent. Rate the response based on criteria such as relevance, consistency, accuracy, and reliability. Provide a score (0 to 100) for each criterion along with a brief 1 to 2 sentence explanation in JSON format."""
-
-def get_reflector_agent_instructions():
-    return """You are the reflector agent. Your task is to recreate a better reasoning response based on the ratings and explanations provided by the rater agent. Improve the response by addressing the identified issues and enhancing the overall quality of the reasoning."""
-
-def get_concluder_agent_instructions():
-    return """You are the concluder agent. Your task is to provide the final answer based on the improved reasoning response from the reflector agent. Summarize the key points and present the final conclusion to the user."""
-
-planner_agent = Agent(
-    name="Planner Agent",
-    instructions=get_planner_agent_instructions(),
-    model=model
-)
-
-thinker_agent = Agent(
-    name="Thinker Agent",
-    instructions=get_thinker_agent_instructions(),
-    model=model
-)
-
-rater_agent = Agent(
-    name="Rater Agent",
-    instructions=get_rater_agent_instructions(),
-    model=model
-)
-
-reflector_agent = Agent(
-    name="Reflector Agent",
-    instructions=get_reflector_agent_instructions(),
-    model=model
-)
-
-concluder_agent = Agent(
-    name="Concluder Agent",
-    instructions=get_concluder_agent_instructions(),
-    model=model
-)
-
-def transfer_to_planner_agent():
-    return planner_agent
-
-def transfer_to_thinker_agent():
-    return thinker_agent
-
-def transfer_to_rater_agent():
-    return rater_agent
-
-def transfer_to_reflector_agent():
-    return reflector_agent
-
-def transfer_to_concluder_agent():
-    return concluder_agent
-
-planner_agent.functions = [transfer_to_thinker_agent]
-thinker_agent.functions = [transfer_to_rater_agent]
-rater_agent.functions = [transfer_to_reflector_agent]
-reflector_agent.functions = [transfer_to_concluder_agent]
-concluder_agent.functions = [transfer_back_to_router_agent]
