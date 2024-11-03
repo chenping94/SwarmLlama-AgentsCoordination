@@ -43,6 +43,7 @@ requests==2.32.3
 rich==13.9.2
 shellingham==1.5.4
 sniffio==1.3.1
+streamlit==1.24.1
 swarm @ git+https://github.com/openai/swarm.git
 tenacity==8.5.0
 tqdm==4.66.5
