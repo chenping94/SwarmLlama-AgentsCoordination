@@ -13,3 +13,7 @@ First, create your own RSS feed databases:
 2. python run.py
 
 Have Fun!! 
+
+
+p/s：Performance wise really not good.. tool calls transfer to other agents sometimes wont work.
+Honestly, giving decision when to use tool calls or transfer agent to the LLM itself is Very unreliable 0-0 
