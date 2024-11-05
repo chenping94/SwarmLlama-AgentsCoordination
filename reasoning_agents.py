@@ -26,13 +26,19 @@ Focus on these criteria for logical problems:
 """
 
 def get_thinker_agent_instructions():
-    return """You are the thinker agent. Your task is to follow the plan/tasks created by the planner agent and provide detailed, step-by-step explanations of your thought process. For each step:
+    return """You are a critical thinker no less than Plato and Pythagoras. Your task is to follow the plan/tasks provided(if any) or create them and provide detailed, step-by-step explanations of your thought process. For each step:
+0. Break down the problem into smaller, manageable steps and outline the approach in specific.
 1. Provide a clear, concise title describing the current reasoning phase.
 2. Elaborate on your thought process in the content section.
 3. Decide whether to continue reasoning or final_answer.
 
 Key Instructions:
-- Employ at least 5 distinct reasoning steps.
+- Employ at least 5 distinct reasoning steps. Considers these criterias: 
+1. Edge Case Consideration
+2. Precision Consideration
+3. Alternative Hypothesis 
+4. Approach Evaluation
+5. Elimination
 - Acknowledge your limitations as an AI and explicitly state what you can and cannot do.
 - Actively explore and evaluate alternative answers or approaches.
 - Critically assess your own reasoning; identify potential flaws or biases.
@@ -50,17 +56,12 @@ Use JSON with keys: 'title', 'content', 'next_action' (values: 'continue' or 'fi
 Example of a valid JSON response:
 {"title": "Initial Problem Analysis", "content": "To approach this problem effectively, I'll first break down the given information into key components. This involves identifying...[detailed explanation]... By structuring the problem this way, we can systematically address each aspect.", "next_action": "continue"}
 
-Now, pass to rater agent your response together with previous response from planner agent and the query to rater agent.
+After you gave final_answer, pass to rater agent your all of your reasoning steps up to final_answer altogether and the ogirinal query to rater agent.
 """
 
 def get_rater_agent_instructions():
     return """You are the rater agent. You are a critical thinker no less than Socrates and Tesla. 
-Your task is to analyze and evaluate the step-by-step response provided by the thinker agent, identifying specific areas where the response may lack clarity, depth, or relevance, and providing constructive feedback.
-
-
-As an expert critic and LLM reflector, your task is to analyze the  response of an expert in specified domain towards a query, identifying specific areas where the response may lack clarity, depth, or relevance, and providing constructive feedback within 1 to 3 sentences briefly.
-
-Focus on providing constructive feedback, highlighting shortcomings and offering actionable suggestions for improvement. Maintain a supportive tone that encourages growth and development.
+Your task is to analyze and evaluate the step-by-step response provided by the thinker expert in specified domain, identifying specific areas where the response may lack clarity, depth, or relevance, and providing constructive feedback within 1 to 3 sentences briefly.
 
 # Assessment Criteria
 
@@ -73,6 +74,7 @@ Focus on providing constructive feedback, highlighting shortcomings and offering
 - **Usefulness**: Does the response offer unique insights or express ideas in an useful way, is the solution offered feasible to address the issues?
 
 Provide a score (0 to 1) for each criterion along with a brief 1 to 2 sentence explanation in JSON format.
+
 # Output Format
 
 Produce a well-formatted JSON for each assessment criterion listed, offering detailed feedback. Recap the key strengths and areas for improvement.
@@ -91,7 +93,7 @@ Use JSON with keys: 'title' (values: Clarity,Depth,Relevance,Coherence,Accuracy,
 {"title": "Usefulness", "comment": "The response lacks usefulness, largely restating known information without unique insight (out of the box) that could really solve the issues.", "rating": "0.45"}
 
 **Average score**: (0.45+0.95+0.75+0.65+0.50+0.65+0.55)/7 = 0.64
-**Passing score**: 0.64 is lower than 0.85, will call the reflector agent. Otherwise if higher than 0.85, can skip reflector and call concluder agent instead.
+**Passing score**: 0.64 is lower than 0.85, will call the reflector agent. 
 
 # Notes
 
@@ -100,6 +102,7 @@ Use JSON with keys: 'title' (values: Clarity,Depth,Relevance,Coherence,Accuracy,
 - Address both strengths and weaknesses equally to provide balanced feedback.
 - Keep the feedback brief and specific. 
 
+After calculated your average rating of all 7 assessment criteria, if the average rating is less than 0.85, then call the reflector agent to improve the response. Otherwise if higher than 0.85, can skip reflector and call concluder agent instead.
 
 """
 
@@ -124,7 +127,7 @@ IMPORTANT: Respond STRICTLY with a single, well-formatted JSON object for each s
 Response Format:
 Use JSON with keys: 'title', 'content', 'next_action' (values: 'continue' or 'final_answer')
 
-Once you reached final answer, PASS your response together with original query to concluder agent.
+Once you reached final answer, PASS your all response together with original query to concluder agent.
 """
 
 def get_concluder_agent_instructions():
@@ -168,7 +171,7 @@ thinker_agent = Agent(
 rater_agent = Agent(
     name="Rater Agent",
     instructions=get_rater_agent_instructions(),
-    model=modelB,
+    model=model,
     functions=[transfer_to_reflector_agent],
     tool_choice="auto" 
 )

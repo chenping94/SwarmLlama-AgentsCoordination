@@ -4,6 +4,7 @@ from swarm import Swarm
 import json
 
 from sql_agents import sql_router_agent
+from reasoning_agents import thinker_agent
 
 ollama_client = OpenAI(
     base_url="http://localhost:11434/v1",        
@@ -115,4 +116,5 @@ def run(
         agent = response.agent
 
 if __name__ == "__main__":
-    run(sql_router_agent)
+    # run(sql_router_agent)
+    run(thinker_agent)
